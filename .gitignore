@@ -1,4 +1,5 @@
 .env
 .venv/
 __pycache__/
-.ipynb_checkpoints/
+.ipynb_checkpoints/run_log.txt
+metabase_admin_local.txt

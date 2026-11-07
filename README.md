@@ -103,19 +103,29 @@ Os três notebooks em [`notebooks_pandas/`](notebooks_pandas/) estão **executad
 | Tabela de gates com todos OK | 03 · Passo 4 | **16 de 16 OK** (e a demonstração de bloqueio com uma linha duplicada) |
 | Três tabelas publicadas e o contrato | 03 · Passo 5 + "O contrato de dados publicado" | vendas_diarias 572 · clientes_360 5.600 · avaliacoes_resumo 200 |
 | Tabelas gold no Postgres | 03 · Passo 6 + "Evidência: o que está no Postgres" | as 3 tabelas, com `SELECT` para `metabase_ro` e escrita negada |
-| Pergunta de negócio (receita por dia) | 03 · "Pergunta de negócio" + [`docs/metabase.md`](docs/metabase.md) | 572 dias, receita total R$ 38.843.788,40 |
-| 1ª execução, em que o gate bloqueou a publicação | [`docs/evidencias/03_gold_1a_execucao_gate_bloqueou.ipynb`](docs/evidencias/03_gold_1a_execucao_gate_bloqueou.ipynb) | `pedidos Gold = pedidos válidos Silver (25329)` → ERRO |
+| Pergunta de negócio (receita por dia) no Metabase | prints abaixo + 03 · "Pergunta de negócio" + [`docs/metabase.md`](docs/metabase.md) | 572 dias, receita total R$ 38.843.788,40 |
+| 1ª execução (rodada de desenvolvimento, antes da versão com Docker), em que o gate bloqueou a publicação | [`docs/evidencias/03_gold_1a_execucao_gate_bloqueou.ipynb`](docs/evidencias/03_gold_1a_execucao_gate_bloqueou.ipynb) | `pedidos Gold = pedidos válidos Silver (25329)` → ERRO |
 
 ![Receita por dia](docs/img/receita_por_dia.png)
 
 ### Ambiente desta execução
 
-- Postgres 16 local (banco `serving`, mesmo nome do `docker-compose`).
-- Object storage: a máquina onde executei os notebooks não tinha Docker. Usei um servidor S3 compatível local (`moto_server`) em `localhost:9000`, com as mesmas credenciais e a mesma API do MinIO. **O código dos notebooks é o mesmo**: com `docker compose up -d` (pasta `docker/`) eles rodam contra o MinIO sem mudança. (Por isso aparece `server: Werkzeug` em uma saída do notebook 01.)
-- Python com `pandas 2.3`, `pyarrow`, `boto3`, `sqlalchemy`, `psycopg2`.
-- Senhas: só existem no `docker/.env` (fora do Git). O repositório traz o [`docker/.env.example`](docker/.env.example). Os valores padrão que aparecem no código dos notebooks são os de laboratório do kit e podem ser trocados por variáveis de ambiente.
+- MacBook (Apple Silicon) com **Docker**: `docker compose up -d` na pasta `docker/` sobe **MinIO**, **Postgres 16 + pgvector** (banco `serving`, exposto na porta 5433 do host) e **Metabase v0.55**, exatamente o compose do kit.
+- Python 3.12 com `pandas 2.x`, `pyarrow`, `boto3`, `sqlalchemy`, `psycopg2`. Os notebooks foram executados com `jupyter nbconvert --execute` pelo script [`rodar_entrega.command`](rodar_entrega.command), que sobe o Docker, cria o ambiente e roda 01, 02 e 03 em ordem.
+- O Metabase se conecta ao Postgres com o usuário **`metabase_ro`** (só `SELECT`), e por isso enxerga apenas o schema `gold`.
+- Senhas: o `docker/.env` não está no repositório (só o [`.env.example`](docker/.env.example)). Os valores padrão que aparecem no código e no script são as senhas de laboratório do kit; em produção ficariam num cofre de segredos.
 
-**Como reproduzir:** `cd docker && cp .env.example .env && docker compose up -d`, depois `pip install -r requirements.txt` e executar `notebooks_pandas/01`, `02` e `03` em ordem. Para o Metabase, seguir [`docs/metabase.md`](docs/metabase.md).
+### Metabase: pergunta de negócio e dashboard
+
+**Receita por dia** (`gold.vendas_diarias`, soma de `receita` por dia, 572 dias):
+
+![Metabase · Receita por dia](docs/img/metabase_receita_por_dia.jpg)
+
+Dashboard com receita por dia, receita por mês e clientes por segmento:
+
+![Metabase · dashboard](docs/img/metabase_dashboard.jpg)
+
+**Como reproduzir:** no macOS/Linux, `./rodar_entrega.command` (ou: `cd docker && cp .env.example .env && docker compose up -d`, depois `pip install -r requirements.txt` e executar `notebooks_pandas/01`, `02` e `03` em ordem). Para o Metabase, seguir [`docs/metabase.md`](docs/metabase.md).
 
 ---
 
@@ -182,6 +192,7 @@ Hoje são ~34 mil pedidos; 1.000 vezes seria ~34 milhões por carga, com ~7,5 GB
 ```
 .
 ├── README.md                     # Partes 1 e 3 (este arquivo)
+├── rodar_entrega.command         # sobe o Docker e executa os 3 notebooks
 ├── notebooks_pandas/             # Parte 2: notebooks EXECUTADOS (01 bronze, 02 silver, 03 gold)
 ├── notebooks/                    # versão Spark do kit (não executada nesta entrega)
 ├── common/                       # funções do kit (Spark/Iceberg, DQ)
